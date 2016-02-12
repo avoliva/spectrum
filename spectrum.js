@@ -1,4 +1,4 @@
-// Spectrum Colorpicker v1.7.1
+// Spectrum Colorpicker v1.8.0
 // https://github.com/bgrins/spectrum
 // Author: Brian Grinstead
 // License: MIT
@@ -10,7 +10,7 @@
         define(['jquery'], factory);
     }
     else if (typeof exports == "object" && typeof module == "object") { // CommonJS
-        module.exports = factory;
+        module.exports = factory(require('jquery'));
     }
     else { // Browser
         factory(jQuery);
@@ -234,8 +234,7 @@
             previewElement = replacer.find(".sp-preview-inner"),
             initialColor = opts.color || (isInput && boundElement.val()),
             colorOnShow = false,
-            preferredFormat = opts.preferredFormat,
-            currentPreferredFormat = preferredFormat,
+            currentPreferredFormat = opts.preferredFormat,
             clickoutFiresChange = !opts.showButtons || opts.clickoutFiresChange,
             isEmpty = !initialColor,
             allowEmpty = opts.allowEmpty && !isInputTypeColor;
@@ -444,7 +443,7 @@
                 // In case color was black - update the preview UI and set the format
                 // since the set function will not run (default color is black).
                 updateUI();
-                currentPreferredFormat = preferredFormat || tinycolor(initialColor).format;
+                currentPreferredFormat = opts.preferredFormat || tinycolor(initialColor).format;
 
                 addColorToSelectionPalette(initialColor);
             }
@@ -706,7 +705,7 @@
             updateUI();
 
             if (newColor && newColor.isValid() && !ignoreFormatChange) {
-                currentPreferredFormat = preferredFormat || newColor.getFormat();
+                currentPreferredFormat = opts.preferredFormat || newColor.getFormat();
             }
         }
 
@@ -879,6 +878,9 @@
         }
 
         function reflow() {
+            if (!visible) {
+                return; // Calculations would be useless and wouldn't be reliable anyways
+            }
             dragWidth = dragger.width();
             dragHeight = dragger.height();
             dragHelperHeight = dragHelper.height();
@@ -923,6 +925,10 @@
             }
 
             opts[optionName] = optionValue;
+
+            if (optionName === "preferredFormat") {
+                currentPreferredFormat = opts.preferredFormat;
+            }
             applyOptions();
         }
 
@@ -983,17 +989,27 @@
         var viewWidth = docElem.clientWidth + $(doc).scrollLeft();
         var viewHeight = docElem.clientHeight + $(doc).scrollTop();
         var offset = input.offset();
-        offset.top += inputHeight;
+        var offsetLeft = offset.left;
+        var offsetTop = offset.top;
 
-        offset.left -=
-            Math.min(offset.left, (offset.left + dpWidth > viewWidth && viewWidth > dpWidth) ?
-            Math.abs(offset.left + dpWidth - viewWidth) : 0);
+        offsetTop += inputHeight;
 
-        offset.top -=
-            Math.min(offset.top, ((offset.top + dpHeight > viewHeight && viewHeight > dpHeight) ?
+        offsetLeft -=
+            Math.min(offsetLeft, (offsetLeft + dpWidth > viewWidth && viewWidth > dpWidth) ?
+            Math.abs(offsetLeft + dpWidth - viewWidth) : 0);
+
+        offsetTop -=
+            Math.min(offsetTop, ((offsetTop + dpHeight > viewHeight && viewHeight > dpHeight) ?
             Math.abs(dpHeight + inputHeight - extraY) : extraY));
 
-        return offset;
+        return {
+            top: offsetTop,
+            bottom: offset.bottom,
+            left: offsetLeft,
+            right: offset.right,
+            width: offset.width,
+            height: offset.height
+        };
     }
 
     /**
